@@ -1,4 +1,7 @@
+import os
 import pathlib
+
+from dotenv import dotenv_values
 
 DATA_FOLDER = pathlib.Path('./data')
 
@@ -14,3 +17,7 @@ HTML_TAG_TD = [
     {'class': 'td1'},
     {'class': 'td2'},
 ]
+
+config = dotenv_values(".env")
+SHIKIMORI_CLIENT_ID = config.get('SHIKIMORI_CLIENT_ID')
+SHIKIMORI_CLIENT_SECRET = config.get('SHIKIMORI_CLIENT_SECRET')
