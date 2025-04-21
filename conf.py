@@ -1,0 +1,35 @@
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+
+    DATA_FOLDER: Path = './data'
+
+    SHIKIMORI_CLIENT_ID: str
+    SHIKIMORI_CLIENT_SECRET: str
+
+    MAL_USERNAME: str
+    SHIKIMORI_USERNAME: str
+
+    @property
+    def DATA_SOURCE_MYANIMELIST(self) -> Path:
+        return self.DATA_FOLDER / 'source' / 'myanimelist'
+
+    STATUS_SELECTED: list = [
+        {'name': 'Currently Watching', 'id': 1},
+        {'name': 'Completed', 'id': 2},
+        {'name': 'On Hold', 'id': 3},
+        {'name': 'Dropped', 'id': 4},
+        {'name': 'Plan to Watch', 'id': 6}
+    ]
+
+    HTML_TAG_TD: list = [
+        {'class': 'td1'},
+        {'class': 'td2'},
+    ]
+
+
+settings = Settings()

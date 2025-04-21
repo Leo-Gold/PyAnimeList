@@ -1,6 +1,6 @@
 import requests
 
-import settings
+from conf import settings
 
 
 def url_anime_list(username, status_id, filter=''):

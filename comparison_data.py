@@ -1,4 +1,4 @@
-import settings
+from conf import settings
 
 def main():
     pass

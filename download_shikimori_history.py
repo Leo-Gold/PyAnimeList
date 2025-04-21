@@ -2,7 +2,7 @@ import json
 
 import requests
 
-import settings
+from conf import settings
 
 
 def main(username):
