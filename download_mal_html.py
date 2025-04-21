@@ -1,12 +1,9 @@
-import json
-
 import requests
-from bs4 import BeautifulSoup
 
 import settings
 
-
 def url_anime_list(username, status_id, filter=''):
+    response = None
     try:
         url = f"https://myanimelist.net/animelist/{username}"
         response = requests.get(url, params={'status': status_id, 'tag': filter})
@@ -25,25 +22,18 @@ def url_anime_list(username, status_id, filter=''):
 
 
 def main():
-    name = input('Введите ваш ник а My Anime List: ')
+    name = input('Введите ваш ник на My Anime List: ')
     for status in settings.STATUS_SELECTED:
-        if status.get('name') != 'Plan to Watch':
-            get_content(name, status.get('id'))
-    pass
+        content = url_anime_list(name, status.get('id')).text
+        save_content(content, status.get('name'))
 
 
-def get_content(name, status):
-    result = []
-    html_content = url_anime_list(name, status).text
-    soup = BeautifulSoup(html_content, 'lxml')
-    div = soup.find('div', id='list_surround')
-    arr_tables = div.find_all('table')
-    for tables in arr_tables:
-        for data_td in settings.HTML_TAG_TD:
-            row = tables.find_all('td', class_=data_td.get('class'))
-            if row:
-                result.append(row)
-    return result
+def save_content(content, file_name):
+    settings.DATA_SOURCE_MYANIMELIST.mkdir(parents=True, exist_ok=True)
+    file = f"{settings.DATA_SOURCE_MYANIMELIST}/{file_name}.html"
+    with open(file, "w", encoding="utf-8") as file:
+        file.write(content)
+        print(f"Страница сохранена как {file}")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import pathlib
 from dotenv import dotenv_values
 
 DATA_FOLDER = pathlib.Path('./data')
+DATA_SOURCE_MYANIMELIST = DATA_FOLDER / 'source' / 'myanimelist'
 
 STATUS_SELECTED = [
     {'name': 'Currently Watching', 'id': 1},
