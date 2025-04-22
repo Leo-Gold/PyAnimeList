@@ -1,5 +1,3 @@
-import json
-
 from bs4 import BeautifulSoup
 
 from conf import settings
@@ -22,19 +20,30 @@ def read_file(file_html):
 
 def get_cell(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
-    div = soup.find('div', id='list_surround')
 
-    for table in div.find_all('table'):
-        for tr in table.find_all('tr'):
-            for td_class in settings.HTML_TAG_TD:
-                for td in tr.find_all('td', class_=td_class.get('class')):
-                    # пытаюсь получить массив ячеек, для их дальнейшей обработки
-                    print(type(td))
+    tables = soup.find_all('table', {'border': '0', 'cellpadding': '0', 'cellspacing': '0', 'width': '100%'})
 
+    extracted_data = []
 
+    for table in tables:
+        rows = table.find_all('tr')
+        for row in rows:
+            columns = row.find_all('td')
+            if len(columns) > 1:
+                title_tag = columns[1].find('a', class_='animetitle')
+                score_tag = columns[2].find('span', class_='score-label')
+                type_tag = columns[3]
+                tags_tag = columns[5].find('span', id=lambda x: x and x.startswith('tagLinks'))
 
+                if title_tag and score_tag and type_tag and tags_tag:
+                    title = title_tag.text.strip()
+                    score = score_tag.text.strip()
+                    anime_type = type_tag.text.strip()
+                    tags = ', '.join(tag.text for tag in tags_tag.find_all('a'))
 
+                    extracted_data.append((title, score, anime_type, tags))
 
+    a = 1
 
 
 if __name__ == "__main__":
