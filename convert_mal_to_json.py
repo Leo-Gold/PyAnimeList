@@ -1,6 +1,9 @@
+from typing import List
+
 from bs4 import BeautifulSoup
 
 from conf import settings
+from dto import AnimeInfo
 
 
 def main():
@@ -9,7 +12,7 @@ def main():
             name = html.get('name')
             path = settings.DATA_SOURCE_MYANIMELIST / f'{name}.html'
             content = read_file(path)
-            get_cell(content)
+            animeinfo_list = extract_animeinfo(content)
     pass
 
 
@@ -18,7 +21,7 @@ def read_file(file_html):
         return file.read()
 
 
-def get_cell(html_content):
+def extract_animeinfo(html_content) -> List[AnimeInfo]:
     soup = BeautifulSoup(html_content, 'html.parser')
 
     tables = soup.find_all('table', {'border': '0', 'cellpadding': '0', 'cellspacing': '0', 'width': '100%'})
@@ -41,9 +44,10 @@ def get_cell(html_content):
                     anime_type = type_tag.text.strip()
                     tags = ', '.join(tag.text for tag in tags_tag.find_all('a'))
 
-                    extracted_data.append((title, score, anime_type, tags))
+                    anime_info = AnimeInfo(title, score, anime_type, tags)
+                    extracted_data.append(anime_info)
 
-    a = 1
+    return extracted_data
 
 
 if __name__ == "__main__":
