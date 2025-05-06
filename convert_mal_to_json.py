@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -8,12 +9,11 @@ from dto import AnimeInfo
 
 def main():
     for html in settings.STATUS_SELECTED:
-        if html.get('id') == 3:
-            name = html.get('name')
-            path = settings.DATA_SOURCE_MYANIMELIST / f'{name}.html'
-            content = read_file(path)
-            animeinfo_list = extract_animeinfo(content)
-    pass
+        name = html.get('name')
+        path = settings.DATA_SOURCE_MYANIMELIST / f'{name}.html'
+        content = read_file(path)
+        animeinfo_list = extract_animeinfo(content, name)
+        save_json(animeinfo_list)
 
 
 def read_file(file_html):
@@ -21,32 +21,62 @@ def read_file(file_html):
         return file.read()
 
 
-def extract_animeinfo(html_content) -> List[AnimeInfo]:
-    soup = BeautifulSoup(html_content, 'html.parser')
+def save_json(content):
+    settings.DATA_JSON_MYANIMELIST.mkdir(parents=True, exist_ok=True)
+    filename = settings.DATA_JSON_MYANIMELIST / "data.json"
+    with open(filename, 'w', encoding='utf-8') as file:
+        json.dump(content, file, ensure_ascii=False, indent=4)
 
-    tables = soup.find_all('table', {'border': '0', 'cellpadding': '0', 'cellspacing': '0', 'width': '100%'})
+
+def extract_animeinfo(html_content, status) -> List[AnimeInfo]:
+    soup = BeautifulSoup(html_content, 'html.parser').find("div", id="list_surround")
+
+    tables = soup.find_all('table')
 
     extracted_data = []
 
     for table in tables:
         rows = table.find_all('tr')
         for row in rows:
-            columns = row.find_all('td')
-            if len(columns) > 1:
-                title_tag = columns[1].find('a', class_='animetitle')
-                score_tag = columns[2].find('span', class_='score-label')
-                type_tag = columns[3]
-                tags_tag = columns[5].find('span', id=lambda x: x and x.startswith('tagLinks'))
+            for td_class in settings.HTML_TAG_TD:
+                css_class = td_class.get('class')
 
-                if title_tag and score_tag and type_tag and tags_tag:
-                    title = title_tag.text.strip()
-                    score = score_tag.text.strip()
-                    anime_type = type_tag.text.strip()
-                    tags = ', '.join(tag.text for tag in tags_tag.find_all('a'))
+                columns = row.find_all('td', class_=css_class)
+                extracted_data = table_columns(columns, extracted_data, status)
 
-                    anime_info = AnimeInfo(title, score, anime_type, tags)
-                    extracted_data.append(anime_info)
+    return extracted_data
 
+
+def table_columns(columns, extracted_data, status):
+    # id_anime = columns[1].find('a', class_='List_LightBox')['href'].split('selected_series_id=')[1].split('&')[0]
+    # title = columns[1].find('a', class_='animetitle').get_text(strip=True)
+    # scope = columns[2].find('span', class_='score-label').get_text(strip=True)
+    # progress_text = columns[4].get_text(strip=True)
+    #
+    # if "/" in progress_text:
+    #     p = progress_text.split('/')
+    #     progress_current = p[0]
+    #     progress_all = p[1]
+    # else:
+    #     progress_current = progress_text
+    #     progress_all = progress_current
+    #
+    # date_started = None
+    # date_finished = None
+    # if len(columns) == 7:
+    #     date_started = columns[6].get_text(strip=True)
+    #     date_finished = columns[7].get_text(strip=True)
+    #
+    # anime_info = AnimeInfo(title=title,
+    #                        id_anime=id_anime,
+    #                        scope=scope,
+    #                        status=status,
+    #                        progress_current=progress_current,
+    #                        progress_all=progress_all,
+    #                        date_started=date_started,
+    #                        date_finished=date_finished
+    #                        )
+    # extracted_data.append(anime_info)
     return extracted_data
 
 
