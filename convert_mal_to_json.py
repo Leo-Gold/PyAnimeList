@@ -1,83 +1,81 @@
 import json
 from typing import List
-
 from bs4 import BeautifulSoup
-
 from conf import settings
 from dto import AnimeInfo
+from pathlib import Path
 
 
 def main():
+    all_results = []
     for html in settings.STATUS_SELECTED:
         name = html.get('name')
         path = settings.DATA_SOURCE_MYANIMELIST / f'{name}.html'
-        content = read_file(path)
-        animeinfo_list = extract_animeinfo(content, name)
-        save_json(animeinfo_list)
+        all_results.extend(extract_anime_info(path, name))
+
+    if all_results:
+        save_json(all_results)
+    else:
+        print("No anime information extracted.")
 
 
-def read_file(file_html):
-    with open(file_html, 'r', encoding='utf-8') as file:
-        return file.read()
+def extract_anime_info(path: Path, status: str) -> List[AnimeInfo]:
+    result = []
+    try:
+        with open(path, encoding='utf-8') as file:
+            html_content = file.read()
+
+        soup = BeautifulSoup(html_content, 'html.parser')
+        rows = soup.find_all('tr')
+        class_values = [entry['class'] for entry in settings.HTML_TAG_TD]
+
+        matching_rows = [row for row in rows if row.find('td', class_=class_values)]
+        for row in matching_rows:
+            try:
+                id_anime = row.find('a', class_='List_LightBox')['href'].split('selected_series_id=')[1].split('&')[0]
+                title = row.find('a', class_='animetitle').get_text(strip=True)
+                scope = row.find('span', class_='score-label').get_text(strip=True)
+                progress_text = row.find_all("td")[4].get_text(strip=True)
+
+                progress_current, progress_all = (progress_text.split('/') if '/' in progress_text else
+                                                  (progress_text, progress_text))
+
+                date_started, date_finished = None, None
+                if len(row.find_all("td")) == 8:
+                    date_started = row.find_all("td")[6].get_text(strip=True)
+                    date_finished = row.find_all("td")[7].get_text(strip=True)
+
+                anime_info = AnimeInfo(title=title,
+                                       id_anime=id_anime,
+                                       scope=scope,
+                                       status=status,
+                                       progress_current=progress_current,
+                                       progress_all=progress_all,
+                                       date_started=date_started,
+                                       date_finished=date_finished)
+                result.append(anime_info)
+            except KeyError as e:
+                print(f"KeyError encountered for row: {row}. Error: {e}")
+            except Exception as e:
+                print(f"Unexpected error for row: {row}. Error: {e}")
+        return result
+
+    except FileNotFoundError:
+        print(f"File {path} not found.")
+    except Exception as e:
+        print(f"An error occurred while processing {path}: {e}")
+
+    return result
 
 
 def save_json(content):
-    settings.DATA_JSON_MYANIMELIST.mkdir(parents=True, exist_ok=True)
-    filename = settings.DATA_JSON_MYANIMELIST / "data.json"
-    with open(filename, 'w', encoding='utf-8') as file:
-        json.dump(content, file, ensure_ascii=False, indent=4)
-
-
-def extract_animeinfo(html_content, status) -> List[AnimeInfo]:
-    soup = BeautifulSoup(html_content, 'html.parser').find("div", id="list_surround")
-
-    tables = soup.find_all('table')
-
-    extracted_data = []
-
-    for table in tables:
-        rows = table.find_all('tr')
-        for row in rows:
-            for td_class in settings.HTML_TAG_TD:
-                css_class = td_class.get('class')
-
-                columns = row.find_all('td', class_=css_class)
-                extracted_data = table_columns(columns, extracted_data, status)
-
-    return extracted_data
-
-
-def table_columns(columns, extracted_data, status):
-    # id_anime = columns[1].find('a', class_='List_LightBox')['href'].split('selected_series_id=')[1].split('&')[0]
-    # title = columns[1].find('a', class_='animetitle').get_text(strip=True)
-    # scope = columns[2].find('span', class_='score-label').get_text(strip=True)
-    # progress_text = columns[4].get_text(strip=True)
-    #
-    # if "/" in progress_text:
-    #     p = progress_text.split('/')
-    #     progress_current = p[0]
-    #     progress_all = p[1]
-    # else:
-    #     progress_current = progress_text
-    #     progress_all = progress_current
-    #
-    # date_started = None
-    # date_finished = None
-    # if len(columns) == 7:
-    #     date_started = columns[6].get_text(strip=True)
-    #     date_finished = columns[7].get_text(strip=True)
-    #
-    # anime_info = AnimeInfo(title=title,
-    #                        id_anime=id_anime,
-    #                        scope=scope,
-    #                        status=status,
-    #                        progress_current=progress_current,
-    #                        progress_all=progress_all,
-    #                        date_started=date_started,
-    #                        date_finished=date_finished
-    #                        )
-    # extracted_data.append(anime_info)
-    return extracted_data
+    try:
+        settings.DATA_JSON_MYANIMELIST.mkdir(parents=True, exist_ok=True)
+        filename = settings.DATA_JSON_MYANIMELIST / "data.json"
+        with open(filename, 'w', encoding='utf-8') as file:
+            json.dump(content, file, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving JSON: {e}")
 
 
 if __name__ == "__main__":
