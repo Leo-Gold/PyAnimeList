@@ -1,23 +1,23 @@
 import json
+from dataclasses import asdict
 from typing import List
 from bs4 import BeautifulSoup
 from conf import settings
 from dto import AnimeInfo
 from pathlib import Path
 
-
 def main():
     all_results = []
     for html in settings.STATUS_SELECTED:
         name = html.get('name')
         path = settings.DATA_SOURCE_MYANIMELIST / f'{name}.html'
-        all_results.extend(extract_anime_info(path, name))
+        status = html.get('status')
+        all_results.extend(extract_anime_info(path, status))
 
     if all_results:
         save_json(all_results)
     else:
-        print("No anime information extracted.")
-
+        print("Информация об аниме не извлечена.")
 
 def extract_anime_info(path: Path, status: str) -> List[AnimeInfo]:
     result = []
@@ -34,7 +34,7 @@ def extract_anime_info(path: Path, status: str) -> List[AnimeInfo]:
             try:
                 id_anime = row.find('a', class_='List_LightBox')['href'].split('selected_series_id=')[1].split('&')[0]
                 title = row.find('a', class_='animetitle').get_text(strip=True)
-                scope = row.find('span', class_='score-label').get_text(strip=True)
+                score = row.find('span', class_='score-label').get_text(strip=True)
                 progress_text = row.find_all("td")[4].get_text(strip=True)
 
                 progress_current, progress_all = (progress_text.split('/') if '/' in progress_text else
@@ -47,36 +47,33 @@ def extract_anime_info(path: Path, status: str) -> List[AnimeInfo]:
 
                 anime_info = AnimeInfo(title=title,
                                        id_anime=id_anime,
-                                       scope=scope,
+                                       score=score,
                                        status=status,
                                        progress_current=progress_current,
                                        progress_all=progress_all,
                                        date_started=date_started,
                                        date_finished=date_finished)
                 result.append(anime_info)
-            except KeyError as e:
-                print(f"KeyError encountered for row: {row}. Error: {e}")
             except Exception as e:
-                print(f"Unexpected error for row: {row}. Error: {e}")
+                print(f"ошибка: {e}")
         return result
 
     except FileNotFoundError:
-        print(f"File {path} not found.")
+        print(f"Файл {path} не найден.")
     except Exception as e:
-        print(f"An error occurred while processing {path}: {e}")
+        print(f"Произошла ошибка при обработке {path}: {e}")
 
     return result
 
-
-def save_json(content):
+def save_json(content: List[AnimeInfo]):
     try:
+        anime_list_dicts = [asdict(anime) for anime in content]
         settings.DATA_JSON_MYANIMELIST.mkdir(parents=True, exist_ok=True)
         filename = settings.DATA_JSON_MYANIMELIST / "data.json"
         with open(filename, 'w', encoding='utf-8') as file:
-            json.dump(content, file, ensure_ascii=False, indent=4)
+            json.dump(anime_list_dicts, file, ensure_ascii=False, indent=4)
     except Exception as e:
-        print(f"Error saving JSON: {e}")
-
+        print(f"Ошибка при сохранении JSON: {e}")
 
 if __name__ == "__main__":
     main()

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class AnimeInfo:
     id_anime: str
     title: str
-    scope: str
+    score: str
     status: str
     progress_current: str
     progress_all: str
