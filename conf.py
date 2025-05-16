@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     SHIKIMORI_USERNAME: str
 
     @property
+    def DATA_SOURCE_SHIKIMORI(self) -> Path:
+        return self.DATA_FOLDER / 'source' / 'shikimori'
+    @property
     def DATA_SOURCE_MYANIMELIST(self) -> Path:
         return self.DATA_FOLDER / 'source' / 'myanimelist'
 
@@ -34,6 +37,8 @@ class Settings(BaseSettings):
         {'class': 'td1'},
         {'class': 'td2'},
     ]
+
+    SHIKIMORI_LIMIT: int = 1000
 
 
 settings = Settings()
