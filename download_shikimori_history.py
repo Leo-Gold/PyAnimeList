@@ -14,7 +14,8 @@ def main(username):
     user_id = user_info.get('id')
 
     user_rates_file = path / f"{username}_user_rate.json"
-    user_rates = save_or_read(user_rates_file, lambda: get_user_rates(user_id))
+    user_rates = save_or_read(user_rates_file, lambda: get_user_rates(user_id, 1))
+    print(user_rates)
     pass
 
 
@@ -51,22 +52,26 @@ def get_user_info(username):
     return {}
 
 
-def get_user_rates(user_id):
+def get_user_rates(user_id, page):
     try:
         url = f"https://shikimori.one/api/v2/user_rates/"
         params = {
             'user_id': user_id,
             'target_type': 'Anime',
-            'limit': settings.SHIKIMORI_LIMIT
+            'limit': settings.SHIKIMORI_LIMIT,
+            '': page,
         }
         response = requests.get(url, headers=create_headers(), params=params)
         response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Ошибка HTTP для user_id {user_id}: {e}")
+        result_page = json.loads(response.json())
+        return result_page
     except Exception as e:
         print(f"Непредвиденная ошибка: {e}")
-    return {}
+    return []
+
+def get_user_rates_all(user_id):
+    
+    pass
 
 
 
