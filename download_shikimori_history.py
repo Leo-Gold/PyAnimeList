@@ -59,21 +59,21 @@ def get_user_rates(user_id, page):
         'page': page,
     }
 
-    for attempt in range(10):  # Попробуем несколько раз в случае ошибки
+    for attempt in range(1, 10):  # Попробуем несколько раз в случае ошибки
         try:
             response = requests.get(url, headers=create_headers(), params=params)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as http_err:
             if response.status_code == 429:
-                print(f"Получен 429 код (слишком много запросов). Попытка повторить через {2 ** attempt} секунд.")
-                time.sleep(2 ** attempt)  # Экспоненциальная задержка: 1, 2, 4, 8, 16 секунд и т.д.
+                print(f"Получен 429 код (слишком много запросов). Попытка повторить через {30 + attempt} секунд.")
+                time.sleep(30 + attempt)  # Экспоненциальная задержка: 1, 25, 125 секунд и т.д.
             else:
                 print(f"HTTP ошибка: {http_err}")
                 break
         except Exception as e:
             print(f"Непредвиденная ошибка: {e}")
-            break
+            time.sleep(60)
 
     return []
 
@@ -87,6 +87,7 @@ def get_user_rates_all(user_id):
     page = 1
     while True:
         list_objects = get_user_rates(user_id, page)
+        print(page)
         if not list_objects:
             break
 
@@ -96,21 +97,21 @@ def get_user_rates_all(user_id):
         second_request_count += 1
         minute_request_count += 1
 
-        if second_request_count >= 5:
+        if second_request_count > 3:
             elapsed = time.time() - second_start_time
             if elapsed < 1:
                 time.sleep(1 - elapsed)
             second_start_time = time.time()
             second_request_count = 0
 
-        if minute_request_count >= 90:
+        if minute_request_count > 80:
             elapsed = time.time() - minute_start_time
             if elapsed < 60:
                 time.sleep(60 - elapsed)
             minute_start_time = time.time()
             minute_request_count = 0
 
-        print(page)
+
 
     return list_result
 
