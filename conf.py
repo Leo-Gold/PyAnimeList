@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     MAL_USERNAME: str
     SHIKIMORI_USERNAME: str
 
+    SHIKIMORI_ANIME_HISTORY_PAGE_FROM: int
+    SHIKIMORI_ANIME_HISTORY_PAGE_TO: int
+
     @property
     def DATA_SOURCE_SHIKIMORI(self) -> Path:
         return self.DATA_FOLDER / 'source' / 'shikimori'
@@ -39,6 +42,8 @@ class Settings(BaseSettings):
     ]
 
     SHIKIMORI_LIMIT: int = 1000
+
+    SHIKIMORI_HISTORY_LIMIT: int = 100
 
 
 settings = Settings()

@@ -12,12 +12,10 @@ def main(username):
     user_info_file = path / f"{username}_info.json"
     user_info = save_or_read(user_info_file, lambda: get_user_info(username))
     user_id = user_info.get('id')
-
-    user_rates_file = path / f"{username}_user_rate.json"
-    user_rates = save_or_read(user_rates_file, lambda: get_user_rates_all(user_id))
+    get_user_anime_history_all(username, user_id)
     pass
 
-
+## сохранение данных или чтение данных в/из файл/а
 def save_or_read(file_name, fetch_function):
     if os.path.exists(file_name):
         return read_content(file_name)
@@ -26,7 +24,7 @@ def save_or_read(file_name, fetch_function):
         save_content(content, file_name)
         return content
 
-
+## заголовок запроса
 def create_headers():
     return {
         'User-Agent': 'Api Test',
@@ -37,12 +35,13 @@ def create_headers():
         'redirect_uri': 'urn:ietf:wg:oauth:2.0:oob'
     }
 
-
+## получение информации
 def get_user_info(username):
     try:
         url = f"https://shikimori.one/api/users/{username}/info"
         response = requests.get(url, headers=create_headers())
         response.raise_for_status()
+        sleep_time()
         return response.json()
     except requests.exceptions.RequestException as e:
         print(f"Ошибка HTTP для пользователя {username}: {e}")
@@ -50,76 +49,49 @@ def get_user_info(username):
         print(f"Непредвиденная ошибка: {e}")
     return {}
 
-def get_user_rates(user_id, page):
-    url = "https://shikimori.one/api/v2/user_rates/"
+## получение данных с истории просмотра
+def get_user_anime_history(user_id, page):
+    url = f"https://shikimori.one/api/users/{user_id}/history"
     params = {
-        'user_id': user_id,
-        'target_type': 'Anime',
-        'limit': settings.SHIKIMORI_LIMIT,
+        'limit': settings.SHIKIMORI_HISTORY_LIMIT,
         'page': page,
+        'target_type': 'Anime'
     }
 
-    for attempt in range(1, 10):  # Попробуем несколько раз в случае ошибки
-        try:
-            response = requests.get(url, headers=create_headers(), params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as http_err:
-            if response.status_code == 429:
-                print(f"Получен 429 код (слишком много запросов). Попытка повторить через {30 + attempt} секунд.")
-                time.sleep(30 + attempt)  # Экспоненциальная задержка: 1, 25, 125 секунд и т.д.
+    try:
+        response = requests.get(url, headers=create_headers(), params=params)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"Непредвиденная ошибка: {e}")
+        time.sleep(60)
+
+## проход по выбранному диапозону
+def get_user_anime_history_all(username, user_id):
+    page_from = settings.SHIKIMORI_ANIME_HISTORY_PAGE_FROM
+    page_to = settings.SHIKIMORI_ANIME_HISTORY_PAGE_TO
+    path = settings.DATA_SOURCE_SHIKIMORI
+    if 1 <= page_from <= page_to <= 100000:
+        for page in range(page_from, page_to + 1):
+            content = get_user_anime_history(user_id, page)
+            if content:
+                print(page)
+                file_name =  path / f"{username}_anime_history_{page}.json"
+                save_content(content, file_name)
+                sleep_time()
             else:
-                print(f"HTTP ошибка: {http_err}")
                 break
-        except Exception as e:
-            print(f"Непредвиденная ошибка: {e}")
-            time.sleep(60)
 
-    return []
+## ограничение количество запросов
+def sleep_time():
+    time.sleep(90/60)
 
-def get_user_rates_all(user_id):
-    list_result = []
-    second_request_count = 0
-    minute_request_count = 0
-    second_start_time = time.time()
-    minute_start_time = time.time()
-
-    page = 1
-    while True:
-        list_objects = get_user_rates(user_id, page)
-        print(page)
-        if not list_objects:
-            break
-
-        list_result.extend(list_objects)
-        page += 1
-
-        second_request_count += 1
-        minute_request_count += 1
-
-        if second_request_count > 3:
-            elapsed = time.time() - second_start_time
-            if elapsed < 1:
-                time.sleep(1 - elapsed)
-            second_start_time = time.time()
-            second_request_count = 0
-
-        if minute_request_count > 80:
-            elapsed = time.time() - minute_start_time
-            if elapsed < 60:
-                time.sleep(60 - elapsed)
-            minute_start_time = time.time()
-            minute_request_count = 0
-
-
-
-    return list_result
-
+## сохранение в файл
 def save_content(data, file_name):
     with open(file_name, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
-
+## чтение из файла
 def read_content(file_name):
     with open(file_name, 'r', encoding='utf-8') as file:
         return json.load(file)
